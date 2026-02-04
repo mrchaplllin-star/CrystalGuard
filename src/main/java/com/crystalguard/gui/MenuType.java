@@ -1,0 +1,13 @@
+package com.crystalguard.gui;
+
+public enum MenuType {
+    PLAYER_MAIN,
+    CLASS_SELECT,
+    ARENA_SELECT,
+    POSITION_SELECT,
+    ADMIN_ARENA_LIST,
+    ADMIN_ARENA_EDITOR,
+    ADMIN_SPAWNER_MENU,
+    ADMIN_MOB_EDITOR,
+    ADMIN_MOB_TYPE_SELECT
+}

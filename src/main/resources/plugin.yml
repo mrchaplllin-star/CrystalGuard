@@ -1,0 +1,14 @@
+name: CrystalGuard
+main: com.crystalguard.CrystalGuardPlugin
+version: 1.0.0
+api-version: '1.21'
+commands:
+  turnire:
+    description: Основна команда CrystalGuard
+    usage: /turnire
+    permission: crystalguard.use
+permissions:
+  crystalguard.use:
+    default: true
+  crystalguard.admin:
+    default: op
