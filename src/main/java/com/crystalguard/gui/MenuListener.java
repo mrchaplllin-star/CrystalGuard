@@ -12,6 +12,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -22,6 +23,9 @@ import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataContainer;
+import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.plugin.java.JavaPlugin;
 
 public class MenuListener implements Listener {
     private final CrystalGuardPlugin plugin;
@@ -42,6 +46,20 @@ public class MenuListener implements Listener {
         ItemStack current = event.getCurrentItem();
         if (current == null || current.getType() == Material.AIR) {
             return;
+        }
+        if (holder.getType() == MenuType.ADMIN_MOB_EDITOR
+                && event.getClickedInventory() == event.getView().getTopInventory()) {
+            if (!isEquipmentSlot(event.getSlot())) {
+                event.setCancelled(true);
+            } else if (isPlaceholder(current)) {
+                if (event.getCursor() != null && event.getCursor().getType() != Material.AIR) {
+                    event.setCancelled(false);
+                } else {
+                    event.setCancelled(true);
+                }
+            } else {
+                event.setCancelled(false);
+            }
         }
         switch (holder.getType()) {
             case PLAYER_MAIN -> handlePlayerMain(player, current);
@@ -200,6 +218,7 @@ public class MenuListener implements Listener {
             player.sendMessage("§awarp_dead встановлено.");
         } else if (type == Material.END_CRYSTAL) {
             arena.setCrystalLocation(player.getLocation());
+            player.getWorld().getBlockAt(player.getLocation()).setType(Material.DIAMOND_BLOCK);
             player.sendMessage("§aКристал встановлено.");
         } else if (type == Material.ENDER_PEARL) {
             arena.getSpawnPoints().add(player.getLocation());
@@ -242,21 +261,18 @@ public class MenuListener implements Listener {
             return;
         }
         SpawnerConfig spawner = arena.getSpawners().get(slot);
-        if (event.getClick() == org.bukkit.event.inventory.ClickType.SWAP_OFFHAND) {
-            spawner.setEnabled(!spawner.isEnabled());
-            player.sendMessage("§aСтатус спавнера: " + (spawner.isEnabled() ? "увімкнено" : "вимкнено"));
-        } else if (event.getClick() == ClickType.MIDDLE) {
+        if (event.getClick() == ClickType.MIDDLE) {
+            return;
+        }
+        if (event.getClick() == ClickType.RIGHT && !event.isShiftClick()) {
             player.openInventory(MenuBuilder.createMobEditor(arena, slot));
             return;
-        } else if (player.isSneaking() && event.isLeftClick()) {
-            spawner.setSpawnPointIndex(Math.max(1, spawner.getSpawnPointIndex() - 1));
-        } else if (player.isSneaking() && event.isRightClick()) {
-            int max = Math.max(1, arena.getSpawnPoints().size());
-            spawner.setSpawnPointIndex(Math.min(max, spawner.getSpawnPointIndex() + 1));
+        }
+        if (event.getClick() == ClickType.SWAP_OFFHAND) {
+            spawner.setEnabled(!spawner.isEnabled());
+            player.sendMessage("§aСтатус спавнера: " + (spawner.isEnabled() ? "увімкнено" : "вимкнено"));
         } else if (event.isLeftClick() && !event.isShiftClick()) {
             spawner.setStartWave(Math.max(1, spawner.getStartWave() - 1));
-        } else if (event.isRightClick() && !event.isShiftClick()) {
-            spawner.setStartWave(Math.min(5, spawner.getStartWave() + 1));
         } else if (event.isShiftClick() && event.isLeftClick()) {
             spawner.setEndWave(Math.max(1, spawner.getEndWave() - 1));
         } else if (event.isShiftClick() && event.isRightClick()) {
@@ -284,27 +300,39 @@ public class MenuListener implements Listener {
         Arena arena = optional.get();
         SpawnerConfig spawner = arena.getSpawners().get(spawnerIndex);
         MobConfig mobConfig = spawner.getMobConfig();
-        int slot = event.getSlot();
-        if (slot == 4) {
+        String action = getAction(currentItem(event));
+        if ("mob_type".equals(action)) {
             player.openInventory(MenuBuilder.createMobTypeSelect(arena, spawnerIndex));
             return;
         }
-        if (slot == 13) {
+        if ("stat_hp".equals(action)) {
             mobConfig.setHpMultiplier(adjustValue(mobConfig.getHpMultiplier(), event.isRightClick(), 0.1, 0.5, 5.0));
-        } else if (slot == 14) {
+        } else if ("stat_damage".equals(action)) {
             mobConfig.setDamageMultiplier(adjustValue(mobConfig.getDamageMultiplier(), event.isRightClick(), 0.1, 0.5, 5.0));
-        } else if (slot == 15) {
+        } else if ("stat_speed".equals(action)) {
             mobConfig.setSpeedMultiplier(adjustValue(mobConfig.getSpeedMultiplier(), event.isRightClick(), 0.1, 0.5, 3.0));
-        } else if (slot == 16) {
+        } else if ("stat_elite".equals(action)) {
             mobConfig.setEliteChance(adjustValue(mobConfig.getEliteChance(), event.isRightClick(), 0.05, 0.0, 0.5));
-        } else if (slot == 31) {
+        } else if ("toggle_aggro".equals(action)) {
             mobConfig.setAggroPlayers(!mobConfig.isAggroPlayers());
-        } else if (slot == 32) {
+        } else if ("toggle_crystal".equals(action)) {
             mobConfig.setPreferCrystalWhenIdle(!mobConfig.isPreferCrystalWhenIdle());
-        } else if (slot == 53) {
+        } else if ("random".equals(action)) {
             MobRandomizer.randomizeMob(mobConfig);
-        } else if (isEquipmentSlot(slot)) {
-            event.setCancelled(false);
+        } else if ("back".equals(action)) {
+            player.openInventory(MenuBuilder.createSpawnerMenu(arena));
+            return;
+        } else if ("create_spawner".equals(action)) {
+            createSpawnerBlock(player, spawner);
+            player.openInventory(MenuBuilder.createMobEditor(arena, spawnerIndex));
+            return;
+        } else if (isPaletteItem(currentItem(event))) {
+            Material selected = getPaletteMaterial(currentItem(event));
+            if (selected != null) {
+                spawner.setSpawnerBlockMaterial(selected);
+                player.sendMessage("§aМатеріал спавнера змінено на " + selected.name());
+            }
+        } else if (isEquipmentSlot(event.getSlot())) {
             return;
         }
         player.openInventory(MenuBuilder.createMobEditor(arena, spawnerIndex));
@@ -338,11 +366,11 @@ public class MenuListener implements Listener {
         Arena arena = optional.get();
         SpawnerConfig spawner = arena.getSpawners().get(spawnerIndex);
         MobConfig mobConfig = spawner.getMobConfig();
-        mobConfig.setHelmet(cleanStack(inventory.getItem(10)));
-        mobConfig.setChestplate(cleanStack(inventory.getItem(19)));
-        mobConfig.setLeggings(cleanStack(inventory.getItem(28)));
-        mobConfig.setBoots(cleanStack(inventory.getItem(37)));
-        mobConfig.setMainHand(cleanStack(inventory.getItem(25)));
+        mobConfig.setHelmet(cleanStack(inventory.getItem(28)));
+        mobConfig.setChestplate(cleanStack(inventory.getItem(29)));
+        mobConfig.setLeggings(cleanStack(inventory.getItem(30)));
+        mobConfig.setBoots(cleanStack(inventory.getItem(31)));
+        mobConfig.setMainHand(cleanStack(inventory.getItem(33)));
         mobConfig.setOffHand(cleanStack(inventory.getItem(34)));
         plugin.getArenaManager().saveArenas();
         player.sendMessage("§aЕкіпірування моба збережено.");
@@ -359,11 +387,63 @@ public class MenuListener implements Listener {
     }
 
     private boolean isEquipmentSlot(int slot) {
-        return slot == 10 || slot == 19 || slot == 28 || slot == 37 || slot == 25 || slot == 34;
+        return slot == 28 || slot == 29 || slot == 30 || slot == 31 || slot == 33 || slot == 34;
     }
 
     private double adjustValue(double value, boolean rightClick, double delta, double min, double max) {
         double next = value + (rightClick ? -delta : delta);
         return Math.max(min, Math.min(max, next));
+    }
+
+    private boolean isPlaceholder(ItemStack item) {
+        return "equipment_placeholder".equals(getAction(item));
+    }
+
+    private boolean isPaletteItem(ItemStack item) {
+        if (item == null || !item.hasItemMeta()) {
+            return false;
+        }
+        ItemMeta meta = item.getItemMeta();
+        PersistentDataContainer container = meta.getPersistentDataContainer();
+        return container.has(key("cg_palette"), PersistentDataType.STRING);
+    }
+
+    private Material getPaletteMaterial(ItemStack item) {
+        if (item == null || !item.hasItemMeta()) {
+            return null;
+        }
+        ItemMeta meta = item.getItemMeta();
+        PersistentDataContainer container = meta.getPersistentDataContainer();
+        String value = container.get(key("cg_palette"), PersistentDataType.STRING);
+        if (value == null) {
+            return null;
+        }
+        return Material.matchMaterial(value);
+    }
+
+    private String getAction(ItemStack item) {
+        if (item == null || !item.hasItemMeta()) {
+            return null;
+        }
+        ItemMeta meta = item.getItemMeta();
+        PersistentDataContainer container = meta.getPersistentDataContainer();
+        return container.get(key("cg_action"), PersistentDataType.STRING);
+    }
+
+    private ItemStack currentItem(InventoryClickEvent event) {
+        return event.getCurrentItem();
+    }
+
+    private NamespacedKey key(String value) {
+        return new NamespacedKey(JavaPlugin.getPlugin(com.crystalguard.CrystalGuardPlugin.class), value);
+    }
+
+    private void createSpawnerBlock(Player player, SpawnerConfig spawner) {
+        Location location = player.getLocation().getBlock().getLocation();
+        location.getChunk().load();
+        location.getBlock().setType(spawner.getSpawnerBlockMaterial());
+        spawner.setSpawnerBlockLocation(location);
+        player.sendMessage("§aСпавнер-блок встановлено.");
+        plugin.getArenaManager().saveArenas();
     }
 }

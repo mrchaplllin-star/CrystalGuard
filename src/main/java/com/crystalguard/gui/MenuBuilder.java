@@ -10,11 +10,15 @@ import java.util.List;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataContainer;
+import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.plugin.java.JavaPlugin;
 
 public class MenuBuilder {
     private MenuBuilder() {
@@ -94,9 +98,19 @@ public class MenuBuilder {
                     "§7Мобів/хвиля: " + spawner.getMobsPerWave(),
                     "§7Період: " + spawner.getSpawnPeriodSeconds() + "с",
                     "§7Точка: " + spawner.getSpawnPointIndex(),
-                    "§7Клік: редагувати");
+                    "§7ПКМ: відкрити редактор",
+                    "§7ЛКМ: старт хвилі -1",
+                    "§7Shift+ЛКМ: кінець хвилі -1",
+                    "§7Shift+ПКМ: кінець хвилі +1",
+                    "§7NUM: мобів +1, DROP: мобів -1",
+                    "§7CTRL+DROP: період +1, DOUBLE: період -1");
+            tagAction(item, "spawner_entry");
             inventory.setItem(i, item);
         }
+        ItemStack info = createItem(Material.ANVIL, "§aНалаштування спавнерів",
+                "§7Використовуйте кліки для зміни параметрів.");
+        tagAction(info, "spawner_info");
+        inventory.setItem(53, info);
         return inventory;
     }
 
@@ -104,23 +118,53 @@ public class MenuBuilder {
         Inventory inventory = Bukkit.createInventory(new MenuHolder(MenuType.ADMIN_MOB_EDITOR, arena.getName(), spawnerIndex), 54, "Редактор моба");
         SpawnerConfig spawner = arena.getSpawners().get(spawnerIndex);
         MobConfig mobConfig = spawner.getMobConfig();
-        inventory.setItem(4, createItem(Material.NAME_TAG, "§eТип моба", "§7" + mobConfig.getType().name(), "§7Клік: змінити"));
-        inventory.setItem(10, namedStack(mobConfig.getHelmet(), "§bШолом"));
-        inventory.setItem(19, namedStack(mobConfig.getChestplate(), "§bНагрудник"));
-        inventory.setItem(28, namedStack(mobConfig.getLeggings(), "§bПоножі"));
-        inventory.setItem(37, namedStack(mobConfig.getBoots(), "§bЧеревики"));
-        inventory.setItem(25, namedStack(mobConfig.getMainHand(), "§bОсновна рука"));
+        inventory.setItem(36, actionItem(Material.NAME_TAG, "§eТип моба",
+                "§7Поточний: " + mobConfig.getType().name(),
+                "§7Клік: змінити тип"));
+        inventory.setItem(28, namedStack(mobConfig.getHelmet(), "§bШолом"));
+        inventory.setItem(29, namedStack(mobConfig.getChestplate(), "§bНагрудник"));
+        inventory.setItem(30, namedStack(mobConfig.getLeggings(), "§bПоножі"));
+        inventory.setItem(31, namedStack(mobConfig.getBoots(), "§bЧеревики"));
+        inventory.setItem(33, namedStack(mobConfig.getMainHand(), "§bОсновна рука"));
         inventory.setItem(34, namedStack(mobConfig.getOffHand(), "§bДодаткова рука"));
-        inventory.setItem(13, createItem(Material.HEART_OF_THE_SEA, "§dHP множник", "§7" + format(mobConfig.getHpMultiplier()), "§7ЛКМ +0.1, ПКМ -0.1"));
-        inventory.setItem(14, createItem(Material.IRON_SWORD, "§dDamage множник", "§7" + format(mobConfig.getDamageMultiplier()), "§7ЛКМ +0.1, ПКМ -0.1"));
-        inventory.setItem(15, createItem(Material.SUGAR, "§dSpeed множник", "§7" + format(mobConfig.getSpeedMultiplier()), "§7ЛКМ +0.1, ПКМ -0.1"));
-        inventory.setItem(16, createItem(Material.NETHER_STAR, "§dElite шанс", "§7" + format(mobConfig.getEliteChance()), "§7ЛКМ +0.05, ПКМ -0.05"));
-        inventory.setItem(31, createItem(Material.PAPER, "§eAggro на гравців", "§7" + (mobConfig.isAggroPlayers() ? "Так" : "Ні"), "§7Клік: змінити"));
-        inventory.setItem(32, createItem(Material.END_CRYSTAL, "§eПріоритет кристалу", "§7" + (mobConfig.isPreferCrystalWhenIdle() ? "Так" : "Ні"), "§7Клік: змінити"));
-        inventory.setItem(45, createItem(Material.GRAY_STAINED_GLASS_PANE, "§8Майбутній слот"));
-        inventory.setItem(46, createItem(Material.GRAY_STAINED_GLASS_PANE, "§8Майбутній слот"));
-        inventory.setItem(47, createItem(Material.GRAY_STAINED_GLASS_PANE, "§8Майбутній слот"));
-        inventory.setItem(53, createItem(Material.RABBIT_FOOT, "§aRandom", "§7Зрандомити моба"));
+        inventory.setItem(37, actionItem(Material.HEART_OF_THE_SEA, "§dHP множник",
+                "§7Значення: " + format(mobConfig.getHpMultiplier()),
+                "§7ЛКМ +0.1, ПКМ -0.1"));
+        inventory.setItem(38, actionItem(Material.IRON_SWORD, "§dDamage множник",
+                "§7Значення: " + format(mobConfig.getDamageMultiplier()),
+                "§7ЛКМ +0.1, ПКМ -0.1"));
+        inventory.setItem(39, actionItem(Material.SUGAR, "§dSpeed множник",
+                "§7Значення: " + format(mobConfig.getSpeedMultiplier()),
+                "§7ЛКМ +0.1, ПКМ -0.1"));
+        inventory.setItem(40, actionItem(Material.NETHER_STAR, "§dElite шанс",
+                "§7Значення: " + format(mobConfig.getEliteChance()),
+                "§7ЛКМ +0.05, ПКМ -0.05"));
+        inventory.setItem(42, actionItem(Material.PAPER, "§eAggro на гравців",
+                "§7Поточний: " + (mobConfig.isAggroPlayers() ? "Так" : "Ні"),
+                "§7Клік: змінити"));
+        inventory.setItem(43, actionItem(Material.END_CRYSTAL, "§eПріоритет кристалу",
+                "§7Поточний: " + (mobConfig.isPreferCrystalWhenIdle() ? "Так" : "Ні"),
+                "§7Клік: змінити"));
+        inventory.setItem(45, actionItem(Material.ARROW, "§aНазад",
+                "§7Повернутися до меню спавнерів"));
+        inventory.setItem(49, actionItem(Material.SPAWNER, "§aСтворити спавнер",
+                "§7Матеріал: " + spawner.getSpawnerBlockMaterial().name(),
+                "§7Клік: створити блок спавнера",
+                "§7Буде поставлено на вашій позиції"));
+        inventory.setItem(53, actionItem(Material.RABBIT_FOOT, "§aRandom",
+                "§7Зрандомити моба",
+                "§7Змінює лише конфіг моба"));
+        tagAction(inventory.getItem(36), "mob_type");
+        tagAction(inventory.getItem(37), "stat_hp");
+        tagAction(inventory.getItem(38), "stat_damage");
+        tagAction(inventory.getItem(39), "stat_speed");
+        tagAction(inventory.getItem(40), "stat_elite");
+        tagAction(inventory.getItem(42), "toggle_aggro");
+        tagAction(inventory.getItem(43), "toggle_crystal");
+        tagAction(inventory.getItem(45), "back");
+        tagAction(inventory.getItem(49), "create_spawner");
+        tagAction(inventory.getItem(53), "random");
+        fillPalette(inventory);
         return inventory;
     }
 
@@ -188,7 +232,9 @@ public class MenuBuilder {
 
     private static ItemStack namedStack(ItemStack stack, String name) {
         if (stack == null) {
-            return createItem(Material.BARRIER, name, "§7Порожньо");
+            ItemStack placeholder = createItem(Material.BARRIER, name, "§7Порожньо", "§7Клікніть, щоб встановити предмет");
+            tagAction(placeholder, "equipment_placeholder");
+            return placeholder;
         }
         ItemStack clone = stack.clone();
         ItemMeta meta = clone.getItemMeta();
@@ -208,5 +254,73 @@ public class MenuBuilder {
         } catch (IllegalArgumentException ignored) {
             return Material.ZOMBIE_SPAWN_EGG;
         }
+    }
+
+    private static ItemStack actionItem(Material material, String name, String... loreLines) {
+        ItemStack item = createItem(material, name, loreLines);
+        tagAction(item, "control");
+        return item;
+    }
+
+    private static void fillPalette(Inventory inventory) {
+        List<Material> palette = List.of(
+                Material.PURPLE_GLAZED_TERRACOTTA,
+                Material.MAGENTA_GLAZED_TERRACOTTA,
+                Material.BLUE_GLAZED_TERRACOTTA,
+                Material.PURPLE_TERRACOTTA,
+                Material.MAGENTA_TERRACOTTA,
+                Material.BLUE_TERRACOTTA,
+                Material.PURPLE_CONCRETE,
+                Material.MAGENTA_CONCRETE,
+                Material.BLUE_CONCRETE,
+                Material.PURPLE_CONCRETE_POWDER,
+                Material.MAGENTA_CONCRETE_POWDER,
+                Material.BLUE_CONCRETE_POWDER,
+                Material.PURPLE_STAINED_GLASS,
+                Material.MAGENTA_STAINED_GLASS,
+                Material.BLUE_STAINED_GLASS,
+                Material.PURPLE_STAINED_GLASS_PANE,
+                Material.MAGENTA_STAINED_GLASS_PANE,
+                Material.BLUE_STAINED_GLASS_PANE,
+                Material.PURPUR_BLOCK,
+                Material.PURPUR_PILLAR,
+                Material.END_STONE_BRICKS,
+                Material.AMETHYST_BLOCK,
+                Material.CRYING_OBSIDIAN,
+                Material.OBSIDIAN,
+                Material.RESPAWN_ANCHOR,
+                Material.SHROOMLIGHT,
+                Material.ENCHANTING_TABLE
+        );
+        int index = 0;
+        for (int slot = 0; slot < 27; slot++) {
+            Material material = palette.get(index++);
+            ItemStack item = createItem(material, "§dПалітра: " + material.name(),
+                    "§7Клік: обрати матеріал",
+                    "§7Для блоку спавнера");
+            tagPalette(item, material);
+            inventory.setItem(slot, item);
+        }
+    }
+
+    private static void tagAction(ItemStack item, String action) {
+        if (item == null) {
+            return;
+        }
+        ItemMeta meta = item.getItemMeta();
+        PersistentDataContainer container = meta.getPersistentDataContainer();
+        container.set(key("cg_action"), PersistentDataType.STRING, action);
+        item.setItemMeta(meta);
+    }
+
+    private static void tagPalette(ItemStack item, Material material) {
+        ItemMeta meta = item.getItemMeta();
+        PersistentDataContainer container = meta.getPersistentDataContainer();
+        container.set(key("cg_palette"), PersistentDataType.STRING, material.name());
+        item.setItemMeta(meta);
+    }
+
+    private static NamespacedKey key(String value) {
+        return new NamespacedKey(JavaPlugin.getPlugin(com.crystalguard.CrystalGuardPlugin.class), value);
     }
 }

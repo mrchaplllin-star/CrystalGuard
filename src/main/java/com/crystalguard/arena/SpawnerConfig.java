@@ -1,5 +1,8 @@
 package com.crystalguard.arena;
 
+import org.bukkit.Location;
+import org.bukkit.Material;
+
 public class SpawnerConfig {
     private boolean enabled;
     private int startWave = 1;
@@ -8,6 +11,8 @@ public class SpawnerConfig {
     private int spawnPeriodSeconds = 5;
     private int spawnPointIndex = 1;
     private MobConfig mobConfig = new MobConfig();
+    private Material spawnerBlockMaterial = Material.SPAWNER;
+    private Location spawnerBlockLocation;
 
     public boolean isEnabled() {
         return enabled;
@@ -63,5 +68,21 @@ public class SpawnerConfig {
 
     public void setMobConfig(MobConfig mobConfig) {
         this.mobConfig = mobConfig;
+    }
+
+    public Material getSpawnerBlockMaterial() {
+        return spawnerBlockMaterial;
+    }
+
+    public void setSpawnerBlockMaterial(Material spawnerBlockMaterial) {
+        this.spawnerBlockMaterial = spawnerBlockMaterial;
+    }
+
+    public Location getSpawnerBlockLocation() {
+        return spawnerBlockLocation;
+    }
+
+    public void setSpawnerBlockLocation(Location spawnerBlockLocation) {
+        this.spawnerBlockLocation = spawnerBlockLocation;
     }
 }

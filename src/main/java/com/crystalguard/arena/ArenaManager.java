@@ -10,6 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.Map;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 
@@ -94,6 +95,14 @@ public class ArenaManager {
                     spawner.setMobsPerWave(spawnerSection.getInt("mobsPerWave", 5));
                     spawner.setSpawnPeriodSeconds(spawnerSection.getInt("spawnPeriodSeconds", 5));
                     spawner.setSpawnPointIndex(spawnerSection.getInt("spawnPointIndex", 1));
+                    String materialName = spawnerSection.getString("spawnerBlockMaterial");
+                    if (materialName != null) {
+                        Material material = Material.matchMaterial(materialName);
+                        if (material != null) {
+                            spawner.setSpawnerBlockMaterial(material);
+                        }
+                    }
+                    spawner.setSpawnerBlockLocation(readLocation(spawnerSection.getConfigurationSection("spawnerBlockLocation")));
                     ConfigurationSection mobSection = spawnerSection.getConfigurationSection("mob");
                     if (mobSection != null) {
                         MobConfig mobConfig = MobConfigSerializer.read(mobSection);
@@ -129,6 +138,8 @@ public class ArenaManager {
                 spawnerSection.set("mobsPerWave", spawner.getMobsPerWave());
                 spawnerSection.set("spawnPeriodSeconds", spawner.getSpawnPeriodSeconds());
                 spawnerSection.set("spawnPointIndex", spawner.getSpawnPointIndex());
+                spawnerSection.set("spawnerBlockMaterial", spawner.getSpawnerBlockMaterial().name());
+                writeLocation(spawnerSection.createSection("spawnerBlockLocation"), spawner.getSpawnerBlockLocation());
                 MobConfigSerializer.write(spawnerSection.createSection("mob"), spawner.getMobConfig());
             }
         }
