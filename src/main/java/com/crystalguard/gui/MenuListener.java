@@ -16,6 +16,7 @@ import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.Inventory;
@@ -244,7 +245,7 @@ public class MenuListener implements Listener {
         if (event.getClick() == org.bukkit.event.inventory.ClickType.SWAP_OFFHAND) {
             spawner.setEnabled(!spawner.isEnabled());
             player.sendMessage("§aСтатус спавнера: " + (spawner.isEnabled() ? "увімкнено" : "вимкнено"));
-        } else if (event.isMiddleClick()) {
+        } else if (event.getClick() == ClickType.MIDDLE) {
             player.openInventory(MenuBuilder.createMobEditor(arena, slot));
             return;
         } else if (player.isSneaking() && event.isLeftClick()) {

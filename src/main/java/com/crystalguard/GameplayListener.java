@@ -133,8 +133,11 @@ public class GameplayListener implements Listener {
                 continue;
             }
             if (target.getLocation().distance(player.getLocation()) <= radius) {
-                double max = target.getAttribute(Attribute.GENERIC_MAX_HEALTH).getBaseValue();
-                target.setHealth(Math.min(max, target.getHealth() + 6));
+                var maxHealth = target.getAttribute(Attribute.MAX_HEALTH);
+                if (maxHealth != null) {
+                    double max = maxHealth.getBaseValue();
+                    target.setHealth(Math.min(max, target.getHealth() + 6));
+                }
             }
         }
         player.sendMessage("§aВи застосували зцілення!");

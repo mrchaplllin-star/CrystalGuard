@@ -236,19 +236,22 @@ public class ArenaMatch {
 
     private void applyMobConfig(Mob mob, MobConfig config) {
         LivingEntity living = mob;
-        if (living.getAttribute(Attribute.GENERIC_MAX_HEALTH) != null) {
-            double base = living.getAttribute(Attribute.GENERIC_MAX_HEALTH).getBaseValue();
+        var maxHealth = living.getAttribute(Attribute.MAX_HEALTH);
+        if (maxHealth != null) {
+            double base = maxHealth.getBaseValue();
             double max = base * config.getHpMultiplier();
-            living.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(max);
+            maxHealth.setBaseValue(max);
             living.setHealth(max);
         }
-        if (living.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE) != null) {
-            double base = living.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE).getBaseValue();
-            living.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE).setBaseValue(base * config.getDamageMultiplier());
+        var attackDamage = living.getAttribute(Attribute.ATTACK_DAMAGE);
+        if (attackDamage != null) {
+            double base = attackDamage.getBaseValue();
+            attackDamage.setBaseValue(base * config.getDamageMultiplier());
         }
-        if (living.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED) != null) {
-            double base = living.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).getBaseValue();
-            living.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).setBaseValue(base * config.getSpeedMultiplier());
+        var moveSpeed = living.getAttribute(Attribute.MOVEMENT_SPEED);
+        if (moveSpeed != null) {
+            double base = moveSpeed.getBaseValue();
+            moveSpeed.setBaseValue(base * config.getSpeedMultiplier());
         }
         EntityEquipment equipment = living.getEquipment();
         if (equipment != null) {
