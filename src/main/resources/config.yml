@@ -1,0 +1,14 @@
+crystal:
+  maxHp: 1000
+  hitRadius: 2.5
+  hitPeriodSeconds: 1.0
+  regenEnabled: true
+  regenPerSecond: 25
+waves:
+  total: 5
+  interWaveDelaySeconds: 60
+mana:
+  regenPerSecond: 1
+skills:
+  manaCostSkill1: 4
+  manaCostSkill2: 7
